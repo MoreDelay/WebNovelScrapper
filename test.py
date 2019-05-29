@@ -124,7 +124,7 @@ def main():
     parser.add_argument('-c', dest='chapters', type=int,
                         help='Number of chapters that will be put in a single book.')
     parser.add_argument('-s', dest='website', choices=('kakuyomu', 'syosetu'),
-                        help='Look up novel on this site instead of trying both - "kakuyomu" or "syosetu".')
+                        help='Look up novel on this site instead of guessing - "kakuyomu" or "syosetu".')
 
     args = parser.parse_args()
     user_args = dict()
@@ -137,6 +137,20 @@ def main():
 
     if not args.fast:
         ask_about_settings(settings)
+
+    if not args.website:
+        if args.code[0] == 'n':
+            pass
+            # SYOSETU
+        else:
+            pass
+            # KAKUYOMU
+    elif args.website == 'syosetu':
+        pass
+        # SYOSETU
+    elif args.website == 'kakuyomu':
+        pass
+        # KAKUYOMU
 
     # TODO Create all functions to get a book in this file, including Threading
     # TODO Make a class in syosetu and kakuyomu which provide all specific methods for their sites
