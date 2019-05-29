@@ -72,9 +72,8 @@ class Scrapper:
         soup = self.get_soup(url)
         chapter_d[i] = self.extract_chapter(soup)
 
-        global thread_cnt
         self.mutex.acquire()
-        thread_cnt -= 1
+        self.thread_cnt -= 1
         self.mutex.release()
 
     def thread_writer(self, path, total, chapter_d):
@@ -89,3 +88,18 @@ class Scrapper:
 
             del chapter_d[to_write]
             to_write += 1
+
+    def scrap(self, output_path):
+        # TODO Look at what arguments are needed and stop depending on user input (verbose and quiet option?)
+        code = input("Chapter Code: ")
+
+        work = "/" + code
+        overview_url = self.urlbase + work
+        print(overview_url)
+
+        overview = self.get_novel_overview(overview_url)
+
+        print('TITLE: ' + overview['title'])
+        print("%d Chapters." % len(overview['episodes']))
+
+        self.create_novel_file(overview['title'], overview['episodes'], output_path)

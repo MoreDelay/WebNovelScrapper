@@ -52,20 +52,3 @@ class KakuyomuScrapper(scrapper.Scrapper):
             res_str += inter_str
 
         return res_str
-
-    def main(self, output_path):
-        number = input("Chapter Number: ")
-        if not number.isnumeric():
-            print("THIS IS A NUMBER OF A NOVEL")
-            return
-
-        work = "/works/" + number
-        overview_url = self.urlbase + work
-        print(overview_url)
-
-        overview = self.get_novel_overview(overview_url)
-
-        print('TITLE: ' + overview['title'])
-        print("%d Chapters." % len(overview['episodes']))
-
-        self.create_novel_file(overview['title'], overview['episodes'], output_path)

@@ -57,17 +57,3 @@ class SyosetuScrapper(scrapper.Scrapper):
             res_str += inter_str
 
         return res_str
-
-    def main(self, output_path):
-        code = input("Chapter Code: ")
-
-        work = "/" + code
-        overview_url = self.urlbase + work
-        print(overview_url)
-
-        overview = self.get_novel_overview(overview_url)
-
-        print('TITLE: ' + overview['title'])
-        print("%d Chapters." % len(overview['episodes']))
-
-        self.create_novel_file(overview['title'], overview['episodes'], output_path)
