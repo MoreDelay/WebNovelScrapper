@@ -26,7 +26,7 @@ class KakuyomuScrapper(scrapper.Scrapper):
         chapters = []
         for toc_tag in toc_tags:
             a_tag = toc_tag.find("a")
-            chapters.append(a_tag['href'])
+            chapters.append(self.urlbase + a_tag['href'])
 
         res["chapters"] = chapters
         return res
@@ -56,3 +56,6 @@ class KakuyomuScrapper(scrapper.Scrapper):
             res_str += inter_str
 
         return res_str
+
+    def get_work_url(self):
+        return self.urlbase + '/' + self.code

@@ -6,7 +6,7 @@ import argparse
 import kakuyomu
 import syosetu
 
-legal_settings = ('output_path', 'chapters_per_book')
+legal_settings = ('output_folder', 'chapters_per_book')
 
 
 def save_settings(settings):
@@ -27,26 +27,26 @@ def read_settings():
     return settings
 
 
-def set_output_path(settings):
-    output_path = ''
+def set_output_folder(settings):
+    output_folder = ''
     valid = False
 
     while not valid:
         valid = True
-        output_path = input('Enter an output path. No Path uses current working directory: ')
+        output_folder = input('Enter an output path. No Path uses current working directory: ')
 
         # Empty input
-        if not output_path:
-            output_path = os.path.dirname(__file__).replace('/', '\\')
-        if output_path[-1] != '\\':
-            output_path += '\\'
+        if not output_folder:
+            output_folder = os.path.dirname(__file__).replace('/', '\\')
+        if output_folder[-1] != '\\':
+            output_folder += '\\'
 
         # check if path is valid
-        if not os.path.isdir(output_path):
-            print("ERROR: This is not a directory: '%s'" % output_path, file=sys.stderr)
+        if not os.path.isdir(output_folder):
+            print("ERROR: This is not a directory: '%s'" % output_folder, file=sys.stderr)
             valid = False
 
-    settings['main']['output_path'] = output_path
+    settings['main']['output_folder'] = output_folder
 
 
 def set_chapters_per_book(settings):
@@ -78,13 +78,13 @@ def get_settings(**user_settings):
         if s in user_settings:
             settings['main'][s] = user_settings[s]
 
-    output_path = settings['main']['output_path']
+    output_folder = settings['main']['output_folder']
     book_size = settings['main']['chapters_per_book']
 
     # Get a correct output path if not in settings
-    if not output_path or not os.path.isdir(output_path):
+    if not output_folder or not os.path.isdir(output_folder):
         print('No valid output path was given or saved.')
-        set_output_path(settings)
+        set_output_folder(settings)
 
     # Get a book size limit if not in settings
     try:
@@ -99,18 +99,19 @@ def get_settings(**user_settings):
 
 def ask_about_settings(settings):
     # Functions to change a setting with user input
-    change = {'p': set_output_path, 'c': set_chapters_per_book}
+    change = {'p': set_output_folder, 'c': set_chapters_per_book}
     user_in = True
     while user_in:
         print('Should the following settings be used?')
-        print('Output [P]ath: %s' % settings['main']['output_path'])
+        print('Output [P]ath: %s' % settings['main']['output_folder'])
         print('Number of [C]hapters per book: %s' % settings['main']['chapters_per_book'])
         user_in = input('To change a setting type its letter. Otherwise just press Enter: ').lower().strip()
-        try:
-            # call function to change the specified setting
-            change[user_in](settings)
-        except KeyError:
-            print("ERROR: Did not recognize the setting of '%s'" % user_in, file=sys.stderr)
+        if user_in:
+            try:
+                # call function to change the specified setting
+                change[user_in](settings)
+            except KeyError:
+                print("ERROR: Did not recognize the setting of '%s'" % user_in, file=sys.stderr)
 
 
 def main():
@@ -120,16 +121,18 @@ def main():
     parser.add_argument('-f', dest='fast', action='store_true',
                         help='Do not ask for input, use saved settings.')
     parser.add_argument('-o', dest='output',
-                        help='Use the specified output path.')
+                        help='Creates novel files in the specified output folder.')
     parser.add_argument('-c', dest='chapters', type=int,
                         help='Number of chapters that will be put in a single book.')
     parser.add_argument('-s', dest='website', choices=('kakuyomu', 'syosetu'),
                         help='Look up novel on this site instead of guessing - "kakuyomu" or "syosetu".')
+    parser.add_argument('-q', dest='quiet', action='store_true',
+                        help='In quiet mode there will be no console output while downloading.')
 
     args = parser.parse_args()
     user_args = dict()
     if args.output:
-        user_args['output_path'] = args.output
+        user_args['output_folder'] = args.output
     if args.chapters:
         user_args['chapters_per_book'] = args.chapters
 
@@ -157,8 +160,9 @@ def main():
     if not book:
         raise AssertionError("Book has not been initialized")
 
-    book.scrap(output_path=settings['main']['output_path'],
-               book_size=settings['main']['chapters_per_book'])
+    book.scrap(output_folder=settings['main']['output_folder'],
+               book_size=settings['main']['chapters_per_book'],
+               verbose=(not args.quiet))
 
     print('FINISH')
     # TODO Is everything done here? (Get argument verbose?)
