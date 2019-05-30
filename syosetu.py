@@ -10,6 +10,10 @@ import scrapper
 class SyosetuScrapper(scrapper.Scrapper):
     urlbase = "https://ncode.syosetu.com"
 
+    def __init__(self, code):
+        super().__init__()
+        self.code = code
+
     def get_novel_overview(self, url):
         res = dict()
 
@@ -20,12 +24,12 @@ class SyosetuScrapper(scrapper.Scrapper):
 
         toc = overview_soup.find(name='div', class_='index_box')
         toc_tags = toc.find_all(name="dd", class_="subtitle")
-        episodes = []
+        chapters = []
         for toc_tag in toc_tags:
             a_tag = toc_tag.find("a")
-            episodes.append(a_tag['href'])
+            chapters.append(a_tag['href'])
 
-        res["episodes"] = episodes
+        res["chapters"] = chapters
         return res
 
     def extract_chapter(self, soup):

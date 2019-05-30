@@ -5,7 +5,6 @@ import threading
 from urllib.request import urlopen, URLError
 
 
-# TODO get ready
 class Scrapper:
     urlbase = ""
     thread_cnt = 0
@@ -89,7 +88,7 @@ class Scrapper:
             del chapter_d[to_write]
             to_write += 1
 
-    def scrap(self, output_path):
+    def scrap(self, output_path, book_size=-1, verbose=True):
         # TODO Look at what arguments are needed and stop depending on user input (verbose and quiet option?)
         code = input("Chapter Code: ")
 
@@ -100,6 +99,6 @@ class Scrapper:
         overview = self.get_novel_overview(overview_url)
 
         print('TITLE: ' + overview['title'])
-        print("%d Chapters." % len(overview['episodes']))
+        print("%d Chapters." % len(overview['chapters']))
 
-        self.create_novel_file(overview['title'], overview['episodes'], output_path)
+        self.create_novel_file(overview['title'], overview['chapters'], output_path)

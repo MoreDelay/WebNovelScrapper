@@ -138,41 +138,30 @@ def main():
     if not args.fast:
         ask_about_settings(settings)
 
+    book = None
+
     if not args.website:
+        # Differences between codes (as fas as I can see):
+        # Syosetu code begins with 'n'
+        # Kakuyomu code is just numerical
         if args.code[0] == 'n':
-            pass
-            # SYOSETU
+            book = syosetu.SyosetuScrapper(code=args.code)
         else:
-            pass
-            # KAKUYOMU
+            book = kakuyomu.KakuyomuScrapper(code=args.code)
+
     elif args.website == 'syosetu':
-        pass
-        # SYOSETU
+        book = syosetu.SyosetuScrapper(code=args.code)
     elif args.website == 'kakuyomu':
-        pass
-        # KAKUYOMU
+        book = kakuyomu.KakuyomuScrapper(code=args.code)
 
-    # TODO Create all functions to get a book in this file, including Threading
-    # TODO Make a class in syosetu and kakuyomu which provide all specific methods for their sites
-    #  (named the same, duck typing)
-    # TODO To get a book, first get an object of the needed type by passing the class' code and use its methods
+    if not book:
+        raise AssertionError("Book has not been initialized")
 
-    return
-    choice = input('[s]yousetu.com or [k]akuyomu.jp?: ').lower()
-    if choice == 'k':
-        ky = True
-    elif choice == 's':
-        ky = False
-    else:
-        raise ValueError('Choice has to be "s" or "k".')
-
-
-    if ky:
-        kakuyomu.main(output_path)
-    else:
-        syosetu.main(output_path)
+    book.scrap(output_path=settings['main']['output_path'],
+               book_size=settings['main']['chapters_per_book'])
 
     print('FINISH')
+    # TODO Is everything done here? (Get argument verbose?)
 
 
 main()
