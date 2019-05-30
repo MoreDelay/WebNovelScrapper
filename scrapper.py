@@ -58,6 +58,13 @@ class Scrapper:
         writer.daemon = True
         writer.start()
 
+        link_enumerator = enumerate(links)
+
+        for i in range(thread_cnt):
+            t = threading.Thread(target=self.thread_reader, args=(link_enumerator, chapter_d))
+            t.daemon = True
+            t.start()
+
         for i, link in enumerate(links):
             while thread_cnt >= self.max_threads:
                 continue
@@ -76,13 +83,10 @@ class Scrapper:
         if verbose:
             print(output_folder)
 
-    def thread_reader(self, i, url, chapter_d):
-        soup = self.get_soup(url)
-        chapter_d[i] = self.extract_chapter(soup)
-
-        self.mutex.acquire()
-        self.thread_cnt -= 1
-        self.mutex.release()
+    def thread_reader(self, enumerator, chapter_d):
+        for i, url in enumerator:
+            soup = self.get_soup(url)
+            chapter_d[i] = self.extract_chapter(soup)
 
     def thread_writer(self, output_folder, title, total, chapter_d, chapters_per_book=-1):
         if chapters_per_book == -1:
@@ -114,7 +118,7 @@ class Scrapper:
                 current_abs_chapter += 1
                 chapters_in_book += 1
 
-    def scrap(self, output_folder, book_size=-1, verbose=True):
+    def scrap(self, output_folder, book_size=-1, first_chapter=0, last_chapter=float('inf'), verbose=True):
         # TODO Look at what arguments are needed and stop depending on user input (verbose and quiet option?)
 
         overview_url = self.get_work_url()
@@ -122,8 +126,14 @@ class Scrapper:
 
         overview = self.get_novel_overview(overview_url)
 
-        print('Title: \t' + overview['title'])
-        print("%d Chapters." % len(overview['chapters']))
+        if last_chapter < float('inf'):
+            chapters = overview['chapters'][first_chapter:last_chapter]
+        else:
+            chapters = overview['chapters'][first_chapter:]
 
-        self.create_novels_from_links(overview['title'], overview['chapters'], output_folder,
+        print('Title: \t' + overview['title'])
+        print("%d total chapters." % len(overview['chapters']))
+        print("%d chapters in range." % len(chapters))
+
+        self.create_novels_from_links(overview['title'], chapters, output_folder,
                                       book_size=book_size, verbose=verbose)

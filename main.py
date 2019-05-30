@@ -118,6 +118,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('code',
                         help='The novel code from either syosetu.com or kakuyomu.jp')
+    parser.add_argument('-r', '--range', dest='range',
+                        help='Only downloads chapters in the given range. Format: <start>:<end>\n'
+                             + 'If start is omitted, start from first chapter.\n'
+                             + 'If end is omitted, read all chapters from start until there are no more found.')
     parser.add_argument('-f', dest='fast', action='store_true',
                         help='Do not ask for input, use saved settings.')
     parser.add_argument('-o', dest='output',
@@ -135,6 +139,19 @@ def main():
         user_args['output_folder'] = args.output
     if args.chapters:
         user_args['chapters_per_book'] = args.chapters
+
+    first_chapter = 0
+    last_chapter = float('inf')
+    if args.range:
+        try:
+            s, e = args.range.split(':')
+            if s:
+                first_chapter = int(s)
+            if e:
+                last_chapter = int(e)
+        except Exception:
+            print("The range was not correctly formatted. Use integers. Format: <start>:<end>", file=sys.stderr)
+            return
 
     settings = get_settings(**user_args)
 
@@ -162,6 +179,8 @@ def main():
 
     book.scrap(output_folder=settings['main']['output_folder'],
                book_size=settings['main']['chapters_per_book'],
+               first_chapter=first_chapter,
+               last_chapter=last_chapter,
                verbose=(not args.quiet))
 
     print('FINISH')

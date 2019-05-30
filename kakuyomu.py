@@ -1,8 +1,3 @@
-import bs4
-import ssl
-import codecs
-from urllib.request import urlopen, URLError
-
 import scrapper
 
 

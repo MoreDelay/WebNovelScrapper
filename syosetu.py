@@ -1,9 +1,3 @@
-import bs4
-import ssl
-import codecs
-import threading
-from urllib.request import urlopen, URLError
-
 import scrapper
 
 
