@@ -106,3 +106,4 @@ venv.bak/
 
 # my own ignores:
 .idea/
+settings.ini

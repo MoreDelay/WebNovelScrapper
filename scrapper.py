@@ -2,26 +2,21 @@ import bs4
 import ssl
 import codecs
 import threading
+import sys
 from urllib.request import urlopen, URLError
 
 
 class Scrapper:
-    urlbase = ""
-    thread_cnt = 0
-    max_threads = 10  # TODO, this can go into the constructor
 
-    def __init__(self):
-        if not self.urlbase:
-            raise AssertionError('The value of self.urlbase has to be overwritten by subclasses')
-        self.mutex = threading.Lock()  # Mutex for thread_cnt - TODO Rewrite without the need of thread_cnt
+    def __init__(self, threads=10):
+        self.threads = threads
 
     def get_soup(self, url):  # TODO Instead of arg url, create url inside this method
         try:
             context = ssl.SSLContext()
             resp = urlopen(url, context=context)
         except URLError as e:
-            print(e.reason)
-            return
+            raise AssertionError("There was a problem while accessing the website, because: " + e.reason)
 
         html = resp.read()
         html = codecs.decode(html)
@@ -50,32 +45,17 @@ class Scrapper:
     def create_novels_from_links(self, title, links, output_folder, book_size=-1, verbose=True):
         # self.write_novel_header(path, title, 1)
 
-        global thread_cnt
         chapter_d = dict((i, False) for i in range(len(links)))
 
         writer = threading.Thread(target=self.thread_writer,
-                                  args=(output_folder, title, len(links), chapter_d, book_size))
+                                  args=(output_folder, title, len(links), chapter_d, book_size, verbose))
         writer.daemon = True
         writer.start()
 
         link_enumerator = enumerate(links)
 
-        for i in range(thread_cnt):
+        for i in range(self.threads):
             t = threading.Thread(target=self.thread_reader, args=(link_enumerator, chapter_d))
-            t.daemon = True
-            t.start()
-
-        for i, link in enumerate(links):
-            while thread_cnt >= self.max_threads:
-                continue
-
-            self.mutex.acquire()
-            thread_cnt += 1
-            self.mutex.release()
-
-            if verbose:
-                print('[%d:%d]' % (i + 1, len(links)), link)
-            t = threading.Thread(target=self.thread_reader, args=(i, link, chapter_d))
             t.daemon = True
             t.start()
 
@@ -88,7 +68,7 @@ class Scrapper:
             soup = self.get_soup(url)
             chapter_d[i] = self.extract_chapter(soup)
 
-    def thread_writer(self, output_folder, title, total, chapter_d, chapters_per_book=-1):
+    def thread_writer(self, output_folder, title, total, chapter_d, chapters_per_book=-1, verbose=True):
         if chapters_per_book == -1:
             chapters_per_book = float('inf')
 
@@ -110,6 +90,8 @@ class Scrapper:
 
                 # Write chapter into file
                 with open(current_file, 'a', encoding='utf-8') as output:
+                    if verbose:
+                        print('[%d:%d]' % (current_abs_chapter + 1, total))
                     output.write(chapter_d[current_abs_chapter])
                     output.write('\n\n')
 
@@ -122,18 +104,26 @@ class Scrapper:
         # TODO Look at what arguments are needed and stop depending on user input (verbose and quiet option?)
 
         overview_url = self.get_work_url()
-        print(overview_url)
 
-        overview = self.get_novel_overview(overview_url)
+        try:
+            overview = self.get_novel_overview(overview_url)
+        except AssertionError as e:
+            print("Getting Overview: " + str(e), file=sys.stderr)
+            return
 
         if last_chapter < float('inf'):
             chapters = overview['chapters'][first_chapter:last_chapter]
         else:
             chapters = overview['chapters'][first_chapter:]
 
-        print('Title: \t' + overview['title'])
-        print("%d total chapters." % len(overview['chapters']))
-        print("%d chapters in range." % len(chapters))
+        if verbose:
+            print("Starting scrapping:")
+            print(overview_url)
+            print('Title: \t' + overview['title'])
+            print("%d of %d chapters." % (len(chapters), len(overview['chapters'])))
 
-        self.create_novels_from_links(overview['title'], chapters, output_folder,
-                                      book_size=book_size, verbose=verbose)
+        try:
+            self.create_novels_from_links(overview['title'], chapters, output_folder,
+                                          book_size=book_size, verbose=verbose)
+        except AssertionError as e:
+            print("Getting Chapter: " + str(e), file=sys.stderr)

@@ -76,7 +76,7 @@ def get_settings(**user_settings):
     settings = read_settings()
     for s in legal_settings:
         if s in user_settings:
-            settings['main'][s] = user_settings[s]
+            settings['main'][s] = str(user_settings[s])
 
     output_folder = settings['main']['output_folder']
     book_size = settings['main']['chapters_per_book']
@@ -99,19 +99,24 @@ def get_settings(**user_settings):
 
 def ask_about_settings(settings):
     # Functions to change a setting with user input
+    changed = False
     change = {'p': set_output_folder, 'c': set_chapters_per_book}
     user_in = True
     while user_in:
         print('Should the following settings be used?')
-        print('Output [P]ath: %s' % settings['main']['output_folder'])
-        print('Number of [C]hapters per book: %s' % settings['main']['chapters_per_book'])
+        print('[P] Output Path: \t\t\t\t\t%s' % settings['main']['output_folder'])
+        print('[C] Number of Chapters per book: \t%s' % settings['main']['chapters_per_book'])
         user_in = input('To change a setting type its letter. Otherwise just press Enter: ').lower().strip()
         if user_in:
             try:
                 # call function to change the specified setting
                 change[user_in](settings)
+                changed = True
             except KeyError:
                 print("ERROR: Did not recognize the setting of '%s'" % user_in, file=sys.stderr)
+
+    if changed and 'y' == input("Save settings? (y/n): "):
+        save_settings(settings)
 
 
 def main():
@@ -136,6 +141,8 @@ def main():
     args = parser.parse_args()
     user_args = dict()
     if args.output:
+        if args.output[-1] != '\\':
+            args.output += '\\'
         user_args['output_folder'] = args.output
     if args.chapters:
         user_args['chapters_per_book'] = args.chapters
@@ -146,7 +153,7 @@ def main():
         try:
             s, e = args.range.split(':')
             if s:
-                first_chapter = int(s)
+                first_chapter = int(s)-1
             if e:
                 last_chapter = int(e)
         except Exception:
@@ -178,13 +185,10 @@ def main():
         raise AssertionError("Book has not been initialized")
 
     book.scrap(output_folder=settings['main']['output_folder'],
-               book_size=settings['main']['chapters_per_book'],
+               book_size=int(settings['main']['chapters_per_book']),
                first_chapter=first_chapter,
                last_chapter=last_chapter,
                verbose=(not args.quiet))
-
-    print('FINISH')
-    # TODO Is everything done here? (Get argument verbose?)
 
 
 main()

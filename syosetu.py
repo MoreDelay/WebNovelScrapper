@@ -4,8 +4,8 @@ import scrapper
 class SyosetuScrapper(scrapper.Scrapper):
     urlbase = "https://ncode.syosetu.com"
 
-    def __init__(self, code):
-        super().__init__()
+    def __init__(self, code, threads=10):
+        super().__init__(threads)
         self.code = code
 
     def get_novel_overview(self, url):
