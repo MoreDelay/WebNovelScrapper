@@ -5,10 +5,23 @@ class SyosetuScrapper(scrapper.Scrapper):
     urlbase = "https://ncode.syosetu.com"
 
     def __init__(self, code, threads=10):
+        """
+        Constructor for the Scrapper for syosetu.com.
+        Uses threads to have a greater usage of bandwidth and cpu performance, which increases overall speed.
+        :param code: The unique code for a book overview page found here: https://ncode.syosetu.com/<CODE>/
+        :param threads: Number of threads that request the pages in parallel
+        """
         super().__init__(threads)
         self.code = code
 
     def get_novel_overview(self, url):
+        """
+        Get title and links to the chapters that will be used in extract_chapter()
+        :param url: The link made by get_work_url()
+        :return: A dictionary with the fields:
+                    'title' - A string of the title of the work.
+                    'chapters' - A list of strings that contains all links from which the chapters will be downloaded.
+        """
         res = dict()
 
         overview_soup = self.get_soup(url)
@@ -27,6 +40,11 @@ class SyosetuScrapper(scrapper.Scrapper):
         return res
 
     def extract_chapter(self, soup):
+        """
+        Creates a string of a chapter in html format that can be found in the soup object.
+        :param soup: Soup of html page for a chapter of a book from syosetu.com
+        :return: The chapter in form of a string formatted in html
+        """
         res_str = ""
         title_tag = soup.find(name='p', class_='novel_subtitle')
         content_top_tag = soup.find(name='div', id='novel_honbun')
@@ -57,4 +75,8 @@ class SyosetuScrapper(scrapper.Scrapper):
         return res_str
 
     def get_work_url(self):
+        """
+        Returns a link to the overview page of a book that holds the links to all its chapters
+        :return: The link to the overview page on syosetu.com
+        """
         return self.urlbase + '/' + self.code
