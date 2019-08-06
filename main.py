@@ -184,7 +184,14 @@ def main():
     if not book:
         raise AssertionError("Book has not been initialized")
 
-    book.scrap(output_folder=settings['main']['output_folder'],
+    try:
+        overview = book.get_novel_overview(book.get_work_url())
+    except AssertionError as e:
+        print("Getting Overview: " + str(e), file=sys.stderr)
+        return
+
+    book.scrap(overview=overview,
+               output_folder=settings['main']['output_folder'],
                book_size=int(settings['main']['chapters_per_book']),
                first_chapter=first_chapter,
                last_chapter=last_chapter,

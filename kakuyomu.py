@@ -4,7 +4,7 @@ import scrapper
 class KakuyomuScrapper(scrapper.Scrapper):
     urlbase = "https://kakuyomu.jp"
 
-    def __init__(self, code, threads=10):
+    def __init__(self, code, threads=1):
         """
         Constructor for the Scrapper for kakuyomu.jp.
         Uses threads to have a greater usage of bandwidth and cpu performance, which increases overall speed.
@@ -75,4 +75,4 @@ class KakuyomuScrapper(scrapper.Scrapper):
         Returns a link to the overview page of a book that holds the links to all its chapters
         :return: The link to the overview page on kakuyomu.jp
         """
-        return self.urlbase + '/' + self.code
+        return self.urlbase + '/works/' + self.code

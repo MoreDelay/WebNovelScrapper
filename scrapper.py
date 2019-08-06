@@ -15,7 +15,7 @@ class Scrapper:
         get_novel_overview(url):    Returns a dictionary with the title and all chapter links for the book
         extract_chapter(soup):      By passing the soup of a chapter page returns a string in html format of a chapter.
     """
-    def __init__(self, threads=10):
+    def __init__(self, threads=1):
         self.threads = threads
 
     def get_soup(self, url):  # TODO Instead of arg url, create url inside this method
@@ -25,14 +25,14 @@ class Scrapper:
         :return:        Soup object of the downloaded page
         """
         access_try = 1
-        while access_try <= 3:
+        while access_try <= 1:
             try:
                 context = ssl.SSLContext()
                 resp = urlopen(url, context=context)
                 break
             except URLError as e:
+                print(f"Try {access_try} of 3: Could not access website {url}: " + e.reason, file=sys.stderr)
                 access_try += 1
-                print("Try {} of 3: Could not access website {}: ".format(access_try, url) + e.reason, file=sys.stderr)
                 time.sleep(1)
         else:
             raise AssertionError("There was a problem while accessing the website")
@@ -152,9 +152,12 @@ class Scrapper:
                 current_abs_chapter += 1
                 chapters_in_book += 1
 
-    def scrap(self, output_folder, book_size=-1, first_chapter=0, last_chapter=float('inf'), verbose=True):
+    def scrap(self, overview, output_folder, book_size=-1, first_chapter=0,
+              last_chapter=float('inf'), verbose=True):
         """
         Start the process of ripping books from the website.
+        :param overview:        Novel overview obtained by
+                                Scrapper.get_novel_overview()
         :param output_folder:   Folder in which the files will be created
         :param book_size:       Number of chapters that should go into one file
         :param first_chapter:   The first chapter that should be downloaded
@@ -165,12 +168,6 @@ class Scrapper:
         # TODO Look at what arguments are needed and stop depending on user input (verbose and quiet option?)
 
         overview_url = self.get_work_url()
-
-        try:
-            overview = self.get_novel_overview(overview_url)
-        except AssertionError as e:
-            print("Getting Overview: " + str(e), file=sys.stderr)
-            return
 
         if last_chapter < float('inf'):
             chapters = overview['chapters'][first_chapter:last_chapter]

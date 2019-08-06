@@ -4,7 +4,7 @@ import scrapper
 class SyosetuScrapper(scrapper.Scrapper):
     urlbase = "https://ncode.syosetu.com"
 
-    def __init__(self, code, threads=10):
+    def __init__(self, code, threads=1):
         """
         Constructor for the Scrapper for syosetu.com.
         Uses threads to have a greater usage of bandwidth and cpu performance, which increases overall speed.
