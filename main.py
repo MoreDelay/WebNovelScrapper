@@ -193,9 +193,7 @@ def main():
     book.scrap(overview=overview,
                output_folder=settings['main']['output_folder'],
                book_size=int(settings['main']['chapters_per_book']),
-               first_chapter=first_chapter,
-               last_chapter=last_chapter,
-               verbose=(not args.quiet))
+               )
 
 
 main()

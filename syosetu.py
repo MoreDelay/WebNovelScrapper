@@ -4,27 +4,25 @@ import scrapper
 class SyosetuScrapper(scrapper.Scrapper):
     urlbase = "https://ncode.syosetu.com"
 
-    def __init__(self, code, threads=1):
+    def __init__(self, code):
         """
         Constructor for the Scrapper for syosetu.com.
         Uses threads to have a greater usage of bandwidth and cpu performance, which increases overall speed.
         :param code: The unique code for a book overview page found here: https://ncode.syosetu.com/<CODE>/
-        :param threads: Number of threads that request the pages in parallel
         """
-        super().__init__(threads)
+        super().__init__()
         self.code = code
 
-    def get_novel_overview(self, url):
+    def get_novel_overview(self):
         """
         Get title and links to the chapters that will be used in extract_chapter()
-        :param url: The link made by get_work_url()
         :return: A dictionary with the fields:
                     'title' - A string of the title of the work.
                     'chapters' - A list of strings that contains all links from which the chapters will be downloaded.
         """
         res = dict()
 
-        overview_soup = self.get_soup(url)
+        overview_soup = self.get_soup(self.get_work_url())
 
         title_tag = overview_soup.find(name='p', class_="novel_title")
         res["title"] = title_tag.string

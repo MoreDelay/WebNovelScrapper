@@ -21,7 +21,7 @@ class MainWindow:
         self.select_window = None
         self._current_selection = ()
         self.overview = None
-        self.book = None
+        self.scrapper = None
 
         # WINDOW / ROOT DEFINITION
         self.root = tk.Tk()
@@ -64,16 +64,16 @@ class MainWindow:
                       padx=(0, 15), pady=(0, 10))
 
         # GET CHAPTERS BUTTON
-        self.found_chapters_txt = tk.StringVar()
+        self.status_txt = tk.StringVar()
 
         self.chapters_btn = tk.Button(self.root, text="Get Chapters",
-                                      command=self.clicked_get_chapters)
+                                      command=self.on_get_chapters)
         self.chapters_btn.grid(column=0, row=4, sticky=tk.W,
                                padx=(20, 0), pady=(0, 5))
 
-        self.found_chapters_lbl = \
-            tk.Label(self.root, textvariable=self.found_chapters_txt)
-        self.found_chapters_lbl.grid(column=1, row=4, sticky=tk.W, padx=(5, 0))
+        self.status_lbl = \
+            tk.Label(self.root, textvariable=self.status_txt)
+        self.status_lbl.grid(column=1, row=4, sticky=tk.W, padx=(5, 0))
 
         # ALL CHAPTERS RADIO
         self.chapters_opt = tk.IntVar()
@@ -129,7 +129,7 @@ class MainWindow:
         self.selected_txt.set("Selected: #0")
         self.select_chapters_btn = \
             tk.Button(self.root, textvariable=self.selected_txt,
-                      command=self.select_chapters)
+                      command=self.on_select_chapters)
         self.select_chapters_btn.grid(column=1, row=7, sticky=tk.W)
         # Select Radio when clicking button
         self.select_chapters_btn.bind("<Button-1>",
@@ -137,9 +137,14 @@ class MainWindow:
 
         # DOWNLOAD BUTTON
         self.download_btn = tk.Button(self.root, text="Download",
-                                      command=self.clicked_download)
+                                      command=self.on_download)
         self.download_btn.grid(column=1, row=8, sticky=tk.E,
                                padx=(0, 20), pady=(20, 0))
+
+        # PROGRESS BAR
+        self.bar = ttk.Progressbar(self.root, length=200, value=0)
+        self.bar.grid(column=0, row=9, columnspan=4,
+                      padx=(0, 0), pady=(20, 0))
 
     def infer_changed(self):
         if self.infer.get():
@@ -147,7 +152,7 @@ class MainWindow:
         else:
             self.website_select.configure(state="readonly")
 
-    def clicked_get_chapters(self):
+    def on_get_chapters(self):
         code = self.novel_code.get()
         if len(code) == 0:
             return
@@ -159,36 +164,39 @@ class MainWindow:
                 self.website.set(KAKUYOMU)
 
         if self.website.get() == SYOSETU:
-            self.book = syosetu.SyosetuScrapper(code=code)
+            self.scrapper = syosetu.SyosetuScrapper(code=code)
         elif self.website.get() == KAKUYOMU:
-            self.book = kakuyomu.KakuyomuScrapper(code=code)
+            self.scrapper = kakuyomu.KakuyomuScrapper(code=code)
 
-        self.found_chapters_txt.set("Connecting to server")
+        self.status_txt.set("Connecting to server")
 
-        def get_overview():
+        def thread_get_overview():
             self.chapters_btn.config(state="disabled")
 
             try:
-                self.overview = self.book.get_novel_overview(self.book.get_work_url())
+                self.overview = self.scrapper.get_novel_overview()
                 cnt = len(self.overview['chapters'])
-                self.found_chapters_txt.set(f"Found {cnt} chapters")
+                self.status_txt.set(f"Found {cnt} chapters")
                 self.current_selection = ()
                 self.ch_from.set("1")
                 self.ch_to.set(str(cnt))
             except AssertionError:
-                self.found_chapters_txt.set("Could not find book")
+                self.status_txt.set("Could not find book")
                 self.ch_from.set("0")
                 self.ch_to.set("0")
 
             self.chapters_btn.config(state="normal")
 
-        threading.Thread(target=get_overview).start()
+        t = threading.Thread(target=thread_get_overview)
+        t.daemon = True
+        t.start()
 
-    def clicked_download(self):
+    def on_download(self):
         self.download_btn.config(state='disabled')
+        self.scrapper.listen(self)
 
         def full_download():
-            self.book.scrap(self.overview, output_folder="")
+            self.scrapper.scrap(self.overview, output_folder="")
             self.download_btn.config(state='normal')
 
         def range_download():
@@ -196,7 +204,7 @@ class MainWindow:
             start = int(self.ch_from.get())
             end = int(self.ch_to.get())
             dl_overview['chapters'] = dl_overview['chapters'][start-1:end]
-            self.book.scrap(dl_overview, output_folder="")
+            self.scrapper.scrap(dl_overview, output_folder="")
             self.download_btn.config(state='normal')
 
         def selected_download():
@@ -204,18 +212,23 @@ class MainWindow:
             dl_overview['chapters'] = \
                 [x for i, x in enumerate(dl_overview['chapters'])
                  if i in self.current_selection]
-            self.book.scrap(dl_overview, output_folder="")
+            self.scrapper.scrap(dl_overview, output_folder="")
             self.download_btn.config(state='normal')
 
         download = {0: full_download, 1: range_download, 2: selected_download}
         threading.Thread(target=download[self.chapters_opt.get()]).start()
 
-    def select_chapters(self):
+    def on_select_chapters(self):
         if not self.select_window:
             self.select_window = SelectionWindow(self)
 
     def got_selection(self, selection):
         self.current_selection = selection
+
+    def scrapper_notify(self):
+        done = self.scrapper.progress
+        whole = self.scrapper.whole
+        self.bar.config(value=(done*100)//whole)
 
     @property
     def current_selection(self):
