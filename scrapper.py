@@ -163,10 +163,11 @@ class Scrapper:
         :return:                None
         """
 
-        chapters = overview['chapters']
+        chapters = [link[1] for link in overview['chapters']]
         self.running = True
         self.progress = 0
         self.whole = len(overview['chapters'])
+        self.notify()
 
         self.create_novels_from_links(overview['title'], chapters,
                                       output_folder, book_size=book_size)
@@ -177,6 +178,9 @@ class Scrapper:
         assert callable(listener.scrapper_notify), \
             "Attribute 'scrapper_notify' has to be a function"
         self.listeners.append(listener)
+
+    def unlisten(self, listener):
+        self.listeners = [x for x in self.listeners if x is not listener]
 
     def notify(self):
         for l in self.listeners:

@@ -32,7 +32,9 @@ class SyosetuScrapper(scrapper.Scrapper):
         chapters = []
         for toc_tag in toc_tags:
             a_tag = toc_tag.find("a")
-            chapters.append(self.urlbase + a_tag['href'])
+            link = self.urlbase + a_tag['href']
+            ch_title = a_tag.get_text()
+            chapters.append((ch_title, link))
 
         res["chapters"] = chapters
         return res

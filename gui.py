@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import threading
+import os
 
 import syosetu
 import kakuyomu
@@ -9,14 +10,16 @@ import kakuyomu
 SYOSETU = "syosetu.com"
 KAKUYOMU = "kakuyomu.jp"
 
-main_geometry = "300x350"
+main_geometry = "300x400"
 title = "Web Novel Scrapper"
 header = "Choose which novel to scrap!"
 
 
 class MainWindow:
 
-    def __init__(self):
+    def __init__(self, path="/"):
+        assert isinstance(path, str)
+
         # VARIABLES
         self.select_window = None
         self._current_selection = ()
@@ -29,73 +32,92 @@ class MainWindow:
         self.root.resizable(width=False, height=False)
         self.root.geometry(main_geometry)
 
+        # NOVEL FRAME
+        self.novel_frame = tk.Frame()
+        self.novel_frame.grid(column=0, row=0, sticky=tk.W+tk.E,
+                              padx=20, pady=(10, 0))
+        self.root.grid_columnconfigure(0, weight=1)
+
         # NOVEL CODE ENTRY
-        self.novel_lbl = tk.Label(self.root, text="Enter Novel Code:")
-        self.novel_lbl.grid(column=0, row=0, columnspan=4, sticky=tk.W,
-                            padx=(20, 0), pady=(10, 0))
+        self.novel_lbl = tk.Label(self.novel_frame, text="Enter Novel Code:")
+        self.novel_lbl.grid(column=0, row=0, columnspan=2, sticky=tk.W)
 
         self.novel_code = tk.StringVar()
-        self.novel = tk.Entry(self.root, width=38,
-                              textvariable=self.novel_code)
-        self.novel.grid(column=0, row=1, columnspan=4, sticky=tk.W,
-                        padx=(20, 0), pady=(0, 5))
-        self.novel.focus()
+        self.novel_entry = tk.Entry(self.novel_frame,
+                                    textvariable=self.novel_code)
+        self.novel_entry.grid(column=0, row=1, columnspan=2, sticky=tk.W+tk.E,
+                              pady=(0, 1))
+        self.novel_entry.focus()
+        self.novel_frame.grid_columnconfigure(0, weight=1)
+
+        self.destination_lbl = tk.Label(self.novel_frame,
+                                        text="Destination Path:")
+        self.destination_lbl.grid(column=0, row=2, sticky=tk.W)
+        self.destination = tk.StringVar()
+        self.destination.set(path)
+        self.destination_entry = tk.Entry(self.novel_frame,
+                                          textvariable=self.destination)
+        self.destination_entry.grid(column=0, row=3, sticky=tk.W+tk.E,
+                                    pady=(0, 1))
 
         # WEBSITE SELECTION
-        self.website_lbl = tk.Label(self.root, text="Website:")
-        self.website_lbl.grid(column=0, row=2, columnspan=4, sticky=tk.W,
-                              padx=(20, 0))
+        self.website_lbl = tk.Label(self.novel_frame, text="Website:")
+        self.website_lbl.grid(column=0, row=4, sticky=tk.W)
+
+        self.website_frame = tk.Frame(self.novel_frame)
+        self.website_frame.grid(column=0, row=5, sticky=tk.W)
 
         self.website = tk.StringVar()
         self.website_select = \
-            ttk.Combobox(self.root, width=13, state="readonly",
+            ttk.Combobox(self.website_frame, width=14, state="readonly",
                          textvariable=self.website, values=(SYOSETU, KAKUYOMU))
-        self.website_select.grid(column=0, row=3, sticky=tk.W, columnspan=4,
-                                 padx=(20, 0), pady=(0, 10))
+        self.website_select.grid(column=0, row=0, sticky=tk.W)
         self.website_select.current(1)
         self.website_select.configure(state="disabled")
 
         self.infer = tk.BooleanVar()
         self.infer.set(True)
 
-        self.chk = tk.Checkbutton(self.root, text="Infer automatically",
+        self.chk = tk.Checkbutton(self.website_frame, text="Infer automatically",
                                   var=self.infer, command=self.infer_changed)
-        self.chk.grid(column=1, row=3, sticky=tk.W, columnspan=3,
-                      padx=(0, 15), pady=(0, 10))
+        self.chk.grid(column=1, row=0, sticky=tk.W)
+
+        # CHAPTERS FRAME
+        self.chapters_frame = tk.Frame(self.root)
+        self.chapters_frame.grid(column=0, row=1, sticky=tk.W+tk.E,
+                                 padx=20, pady=(20, 0))
 
         # GET CHAPTERS BUTTON
         self.status_txt = tk.StringVar()
 
-        self.chapters_btn = tk.Button(self.root, text="Get Chapters",
-                                      command=self.on_get_chapters)
-        self.chapters_btn.grid(column=0, row=4, sticky=tk.W,
-                               padx=(20, 0), pady=(0, 5))
+        self.chapters_btn = tk.Button(self.chapters_frame, text="Get Chapters",
+                                      command=self.on_get_chapters, width=14)
+        self.chapters_btn.grid(column=0, row=0, sticky=tk.W, pady=(0, 5))
 
         self.status_lbl = \
-            tk.Label(self.root, textvariable=self.status_txt)
-        self.status_lbl.grid(column=1, row=4, sticky=tk.W, padx=(5, 0))
+            tk.Label(self.chapters_frame, textvariable=self.status_txt)
+        self.status_lbl.grid(column=1, row=0, sticky=tk.W, padx=(5, 0))
 
         # ALL CHAPTERS RADIO
         self.chapters_opt = tk.IntVar()
 
         self.all_chapters_rad = \
-            tk.Radiobutton(self.root, text="All Chapters",
+            tk.Radiobutton(self.chapters_frame, text="All Chapters",
                            variable=self.chapters_opt, value=0)
-        self.all_chapters_rad.grid(column=0, row=5, sticky=tk.W, padx=(20, 0))
+        self.all_chapters_rad.grid(column=0, row=1, sticky=tk.W)
 
         # CHAPTERS FROM RANGE RADIO
         self.range_chapters_rad = \
-            tk.Radiobutton(self.root, text="Range:",
+            tk.Radiobutton(self.chapters_frame, text="Range:",
                            variable=self.chapters_opt, value=1)
-        self.range_chapters_rad.grid(column=0, row=6, sticky=tk.W,
-                                     padx=(20, 0))
+        self.range_chapters_rad.grid(column=0, row=2, sticky=tk.W)
 
         # validation command that only allows digits entered
-        vcmd = (self.root.register(
+        vcmd = (self.chapters_frame.register(
                 lambda x: not x or x.isdigit() or x == "\b"),
                 '%P')
-        self.range_frame = tk.Frame(self.root)
-        self.range_frame.grid(column=1, row=6, sticky=tk.W)
+        self.range_frame = tk.Frame(self.chapters_frame)
+        self.range_frame.grid(column=1, row=2, sticky=tk.W+tk.E)
         self.ch_from = tk.StringVar()
         self.ch_to = tk.StringVar()
         self.ch_from_entry = tk.Entry(self.range_frame, width=5,
@@ -105,9 +127,14 @@ class MainWindow:
         self.ch_to_entry = tk.Entry(self.range_frame, width=5,
                                     textvariable=self.ch_to,
                                     validate='key', validatecommand=vcmd)
-        self.ch_from_entry.grid(column=0, row=0, sticky=tk.W)
-        self.to_label.grid(column=1, row=0, sticky=tk.W)
-        self.ch_to_entry.grid(column=2, row=0, sticky=tk.W)
+        self.ch_from_entry.grid(column=0, row=0, sticky=tk.W+tk.E)
+        self.to_label.grid(column=1, row=0, sticky=tk.W, padx=5)
+        self.ch_to_entry.grid(column=2, row=0, sticky=tk.W+tk.E)
+
+        self.chapters_frame.grid_columnconfigure(1, weight=1)
+        self.range_frame.grid_columnconfigure(0, weight=1)
+        self.range_frame.grid_columnconfigure(2, weight=1)
+
         # Select Radio when editing
         self.ch_from_entry.bind("<Button-1>",
                                 lambda e: self.chapters_opt.set(1))
@@ -120,31 +147,49 @@ class MainWindow:
 
         # SELECT CHAPTERS RADIO
         self.select_chapters_rad = \
-            tk.Radiobutton(self.root, text="Select Chapters:",
+            tk.Radiobutton(self.chapters_frame, text="Select Chapters:",
                            variable=self.chapters_opt, value=2)
-        self.select_chapters_rad.grid(column=0, row=7, sticky=tk.W,
-                                      padx=(20, 0))
+        self.select_chapters_rad.grid(column=0, row=3, sticky=tk.W)
 
         self.selected_txt = tk.StringVar()
         self.selected_txt.set("Selected: #0")
         self.select_chapters_btn = \
-            tk.Button(self.root, textvariable=self.selected_txt,
+            tk.Button(self.chapters_frame, textvariable=self.selected_txt,
                       command=self.on_select_chapters)
-        self.select_chapters_btn.grid(column=1, row=7, sticky=tk.W)
+        self.select_chapters_btn.grid(column=1, row=3, sticky=tk.W+tk.E)
         # Select Radio when clicking button
         self.select_chapters_btn.bind("<Button-1>",
                                       lambda e: self.chapters_opt.set(2))
 
+        # DOWNLOAD FRAME
+        self.download_frame = tk.Frame(self.root)
+        self.download_frame.grid(column=0, row=2, sticky=tk.W+tk.E,
+                                 padx=20, pady=(20, 0))
+        self.download_frame.grid_columnconfigure(0, weight=1)
+
         # DOWNLOAD BUTTON
-        self.download_btn = tk.Button(self.root, text="Download",
+        self.download_btn = tk.Button(self.download_frame, text="Download",
+                                      font="Helvetica 12 bold",
                                       command=self.on_download)
-        self.download_btn.grid(column=1, row=8, sticky=tk.E,
-                               padx=(0, 20), pady=(20, 0))
+        self.download_btn.grid(column=0, row=0, columnspan=2,
+                               sticky=tk.W+tk.E)
 
         # PROGRESS BAR
-        self.bar = ttk.Progressbar(self.root, length=200, value=0)
-        self.bar.grid(column=0, row=9, columnspan=4,
-                      padx=(0, 0), pady=(20, 0))
+        self.bar = ttk.Progressbar(self.download_frame, value=0)
+        self.bar.grid(column=0, row=1, columnspan=2,
+                      pady=(20, 0), sticky=tk.W+tk.E)
+
+        self.progress_text = tk.StringVar()
+        self.progress_text.set("0/0")
+        self.progress_lbl = tk.Label(self.download_frame,
+                                     textvariable=self.progress_text)
+        self.progress_lbl.grid(column=0, row=2, sticky=tk.W)
+
+        self.percent_text = tk.StringVar()
+        self.percent_text.set("0%")
+        self.percent_lbl = tk.Label(self.download_frame,
+                                    textvariable=self.percent_text)
+        self.percent_lbl.grid(column=1, row=2, sticky=tk.E)
 
     def infer_changed(self):
         if self.infer.get():
@@ -153,10 +198,12 @@ class MainWindow:
             self.website_select.configure(state="readonly")
 
     def on_get_chapters(self):
+        self.novel_entry.config(background="#FFFFFF")
+        self.chapters_btn.config(background="#F0F0F0")
         code = self.novel_code.get()
         if len(code) == 0:
+            self.novel_entry.config(background="#FFCCCC")
             return
-
         if self.infer.get():
             if code[0] == 'n':
                 self.website.set(SYOSETU)
@@ -192,31 +239,55 @@ class MainWindow:
         t.start()
 
     def on_download(self):
-        self.download_btn.config(state='disabled')
-        self.scrapper.listen(self)
+        self.destination_entry.config(background="#FFFFFF")
+        self.chapters_btn.config(background="#F0F0F0")
 
+        if not self.scrapper:
+            self.chapters_btn.config(bg="#FFCCCC")
+            return
+
+        path = self.destination.get()
+        if not os.path.isdir(path):
+            self.destination_entry.config(background="#FFCCCC")
+            return
+
+        def download_wrapper(fkt):
+            def f(*args, **kwargs):
+                self.scrapper.listen(self)
+                self.download_btn.config(state='disabled')
+                self.chapters_btn.config(state='disabled')
+
+                fkt(*args, **kwargs)
+
+                self.download_btn.config(state='normal')
+                self.chapters_btn.config(state='normal')
+                self.scrapper.unlisten(self)
+            return f
+
+        @download_wrapper
         def full_download():
             self.scrapper.scrap(self.overview, output_folder="")
-            self.download_btn.config(state='normal')
 
+        @download_wrapper
         def range_download():
             dl_overview = self.overview.copy()
             start = int(self.ch_from.get())
             end = int(self.ch_to.get())
             dl_overview['chapters'] = dl_overview['chapters'][start-1:end]
             self.scrapper.scrap(dl_overview, output_folder="")
-            self.download_btn.config(state='normal')
 
+        @download_wrapper
         def selected_download():
             dl_overview = self.overview.copy()
             dl_overview['chapters'] = \
                 [x for i, x in enumerate(dl_overview['chapters'])
                  if i in self.current_selection]
             self.scrapper.scrap(dl_overview, output_folder="")
-            self.download_btn.config(state='normal')
 
         download = {0: full_download, 1: range_download, 2: selected_download}
-        threading.Thread(target=download[self.chapters_opt.get()]).start()
+        t = threading.Thread(target=download[self.chapters_opt.get()])
+        t.daemon = True
+        t.start()
 
     def on_select_chapters(self):
         if not self.select_window:
@@ -229,6 +300,8 @@ class MainWindow:
         done = self.scrapper.progress
         whole = self.scrapper.whole
         self.bar.config(value=(done*100)//whole)
+        self.percent_text.set(f"{(done * 100) // whole}%")
+        self.progress_text.set(f"{done}/{whole}")
 
     @property
     def current_selection(self):
@@ -248,7 +321,7 @@ class SelectionWindow:
 
         self.window = tk.Toplevel()
         self.window.title("Chapter Selection")
-        self.window.resizable(height=True, width=True)
+        self.window.resizable(height=True, width=False)
 
         # Buttons at the bottom
         self.button_frame = tk.Frame(self.window)
@@ -263,21 +336,28 @@ class SelectionWindow:
         # chapters list
         self.scrollbar = tk.Scrollbar(self.window)
         self.scrollbar.pack(side="right", fill=tk.Y)
-        self.list = tk.Listbox(self.window, selectmode=tk.EXTENDED,
-                               yscrollcommand=self.scrollbar)
+        self.listbox = tk.Listbox(self.window, selectmode=tk.EXTENDED,
+                                  yscrollcommand=self.scrollbar.set,
+                                  font="helvetica 12")
 
         if self.main_window.overview:
-            size = len(self.main_window.overview['chapters'])
+            chapters = self.main_window.overview['chapters']
+            size = len(chapters)
         else:
             size = 0
-        for i in range(1, size+1):  # range(len(overview['chapters'])):
-            self.list.insert(tk.END, str(i))
+
+        for i in range(1, size+1):
+            entry = f"{i}:    {chapters[i-1][0]}"
+            self.listbox.insert(tk.END, entry)
 
         for i in self.main_window.current_selection:
-            self.list.select_set(i)
+            self.listbox.select_set(i)
 
-        self.list.pack(side="left", fill=tk.BOTH)
-        self.scrollbar.config(command=self.list.yview)
+        self.listbox.config(width=0)
+        self.window.geometry("")
+
+        self.listbox.pack(side="left", fill=tk.BOTH)
+        self.scrollbar.config(command=self.listbox.yview)
 
         self.window.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.window.focus()
@@ -286,7 +366,7 @@ class SelectionWindow:
         """
         Set the current selection of chapters for the main window and close
         """
-        selection = self.list.curselection()
+        selection = self.listbox.curselection()
         self.main_window.got_selection(selection)
         self.on_closing()
 
