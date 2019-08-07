@@ -8,11 +8,15 @@ from urllib.request import urlopen, URLError
 
 class Scrapper:
     """
-    The superclass of all scrappers that implement the functions to actually rip books for specific websites.
-    Subclasses have to implement following functions:
-        get_work_url():             Returns the url to the overview page of a book from its site
-        get_novel_overview():       Returns a dictionary with the title and all chapter links for the book
-        extract_chapter(soup):      By passing the soup of a chapter page returns a string in html format of a chapter.
+    The abstract superclass of all scrappers that implement the functions to
+    actually rip books for specific websites. Subclasses have to implement
+    following functions:
+        get_work_url():         Returns the url to the overview page of a
+                                book from its site
+        get_novel_overview():   Returns a dictionary with the title and all
+                                chapter links for the book
+        extract_chapter(soup):  By passing the soup of a chapter page returns
+                                a string in html format of a chapter.
 
     Basic usage: Call get_novel_overview() to the title and chapter links.
     Here one can remove some chapter links or the title if needed, and then
@@ -24,6 +28,16 @@ class Scrapper:
         self.progress = 0
         self.whole = 0
         self.semaphore = threading.Semaphore(0)
+
+    def __init_subclass__(cls, **kwargs):
+        # Constraint subclasses to have provide the needed functions
+        constraints = ('get_work_url',
+                       'get_novel_overview',
+                       'extract_chapter')
+        for c in constraints:
+            assert hasattr(cls, c), f"Please implement the method '{c}' " \
+                f"before use."
+        return super().__init_subclass__(**kwargs)
 
     def get_soup(self, url):
         """
@@ -45,13 +59,21 @@ class Scrapper:
         return soup
 
     def get_novel_overview(self, *args, **kwargs):
-        raise AssertionError('Method was not implemented by %s' % self.__class__)
+        """
+        Implemented by subclasses. Returns an overview dictionary with the
+        following content:
+            overview = {
+                            'title': book_title,
+                            'chapters': (chapter_title, link_to_chapter)
+                        }
+        """
+        raise AssertionError(f'Method not implemented by {self.__class__}')
 
     def extract_chapter(self, *args, **kwargs):
-        raise AssertionError('Method was not implemented by %s' % self.__class__)
+        raise AssertionError(f'Method not implemented by {self.__class__}')
 
     def get_work_url(self, *args, **kwargs):
-        raise AssertionError('Method was not implemented by %s' % self.__class__)
+        raise AssertionError(f'Method not implemented by {self.__class__}')
 
     def write_novel_header(self, output_folder, title, file_nb):
         """

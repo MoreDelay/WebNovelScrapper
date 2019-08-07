@@ -347,8 +347,7 @@ class SelectionWindow:
             size = 0
 
         for i in range(1, size+1):
-            entry = f"{i}:    {chapters[i-1][0]}"
-            self.listbox.insert(tk.END, entry)
+            self.listbox.insert(tk.END, f"{i}:    {chapters[i-1][0]}")
 
         for i in self.main_window.current_selection:
             self.listbox.select_set(i)
