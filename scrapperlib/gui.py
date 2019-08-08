@@ -3,8 +3,7 @@ from tkinter import ttk
 import threading
 import os
 
-import syosetu
-import kakuyomu
+from scrapperlib import syosetu, kakuyomu
 
 # Constants
 SYOSETU = "syosetu.com"

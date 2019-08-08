@@ -1,4 +1,4 @@
-import scrapper
+from scrapperlib import scrapper
 
 
 class KakuyomuScrapper(scrapper.Scrapper):
@@ -11,7 +11,7 @@ class KakuyomuScrapper(scrapper.Scrapper):
         :param code: The unique code for a book overview page found here: https://kakuyomu.jp/works/<CODE>
         """
         super().__init__()
-        self.code = code
+        self.code = str(code)
 
     def get_novel_overview(self):
         """
@@ -33,6 +33,7 @@ class KakuyomuScrapper(scrapper.Scrapper):
         for toc_tag in toc_tags:
             a_tag = toc_tag.find("a")
             link = self.urlbase + a_tag['href']
+            a_tag = a_tag.find("span")
             ch_title = a_tag.get_text()
             chapters.append((ch_title, link))
 

@@ -1,4 +1,4 @@
-import scrapper
+from scrapperlib import scrapper
 
 
 class SyosetuScrapper(scrapper.Scrapper):

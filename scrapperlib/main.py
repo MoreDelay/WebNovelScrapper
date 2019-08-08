@@ -3,11 +3,11 @@ import sys
 import configparser
 import argparse
 
-import kakuyomu
-import syosetu
+from scrapperlib import syosetu, kakuyomu
 
 legal_settings = ('output_folder', 'chapters_per_book')
 
+print(os.path.realpath("."))
 
 def save_settings(settings):
     with open('settings.ini', 'w') as file:
@@ -196,4 +196,4 @@ def main():
                )
 
 
-main()
+#main()
