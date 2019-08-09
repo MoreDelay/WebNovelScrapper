@@ -5,9 +5,10 @@ import argparse
 
 from scrapperlib import syosetu, kakuyomu
 
-legal_settings = ('output_folder', 'chapters_per_book')
+legal_settings = ('output_folder',)
 
 print(os.path.realpath("."))
+
 
 def save_settings(settings):
     with open('settings.ini', 'w') as file:
@@ -131,8 +132,6 @@ def main():
                         help='Do not ask for input, use saved settings.')
     parser.add_argument('-o', dest='output',
                         help='Creates novel files in the specified output folder.')
-    parser.add_argument('-c', dest='chapters', type=int,
-                        help='Number of chapters that will be put in a single book.')
     parser.add_argument('-s', dest='website', choices=('kakuyomu', 'syosetu'),
                         help='Look up novel on this site instead of guessing - "kakuyomu" or "syosetu".')
     parser.add_argument('-q', dest='quiet', action='store_true',
@@ -185,15 +184,13 @@ def main():
         raise AssertionError("Book has not been initialized")
 
     try:
-        overview = book.get_novel_overview(book.get_work_url())
+        overview = book.get_novel_overview()
     except AssertionError as e:
         print("Getting Overview: " + str(e), file=sys.stderr)
         return
 
     book.scrap(overview=overview,
-               output_folder=settings['main']['output_folder'],
-               book_size=int(settings['main']['chapters_per_book']),
-               )
+               output_folder=settings['main']['output_folder'])
 
 
-#main()
+# main()

@@ -75,7 +75,7 @@ class Scrapper:
     def get_work_url(self, *args, **kwargs):
         raise AssertionError(f'Method not implemented by {self.__class__}')
 
-    def write_novel_header(self, output_folder, title, file_nb):
+    def write_novel_header(self, output_folder, title):
         """
         Creates a new file and writes the header of the html code in it. Returns path to the new file.
         :param output_folder:   The folder in which the new file will be created
@@ -83,15 +83,15 @@ class Scrapper:
         :param file_nb:         Number of the file
         :return:                The path to the newly created file
         """
-        file_path = output_folder + title + " %3d" % file_nb + ".html"
+        file_path = output_folder + title + ".html"
         with open(file_path, 'w', encoding='utf-8') as output:
             string = '\n<html>\n<head>\n<meta charset="utf-8">\n<title>'
-            string += title + (" %3d" % file_nb)
+            string += title  # + (" %3d" % file_nb)
             string += '</title>\n<head>\n<body>\n\n'
             output.write(string)
         return file_path
 
-    def create_novels_from_links(self, title, links, output_folder, book_size=-1):
+    def create_novels_from_links(self, title, links, output_folder):
         """
         Called with the links of the chapters which then proceeds to create threads to work on the book.
         :param title:           Name of the novel
@@ -104,7 +104,7 @@ class Scrapper:
         chapter_d = dict((i, False) for i in range(len(links)))
 
         writer = threading.Thread(target=self.thread_writer,
-                                  args=(output_folder, title, len(links), chapter_d, book_size))
+                                  args=(output_folder, title, len(links), chapter_d))
         writer.daemon = True
         writer.start()
 
@@ -130,52 +130,42 @@ class Scrapper:
                 chapter_d[i] = self.extract_chapter(soup)
                 self.semaphore.release()
 
-    def thread_writer(self, output_folder, title, total, chapter_d, chapters_per_book=-1):
+    def thread_writer(self, output_folder, title, total, chapter_d):
         """
         Function of the writer thread (only one needed)
         :param output_folder:       Folder in which the files will be created
         :param title:               Title of the novel
-        :param total:               Total number of chapters (i.e. length of the chapter links list)
+        :param total:               Total number of chapters
+                                    (i.e. length of the chapter links list)
         :param chapter_d:           Dictionary in which all extracted chapters will
                                     be saved in that are ready to be written
-        :param chapters_per_book:   Number of chapters that should go into one file
-        :param verbose:             Boolean whether or not to log progress on the console
         :return:                    None
         """
-        if chapters_per_book == -1:
-            chapters_per_book = float('inf')
 
-        file_nb = 0
-        current_abs_chapter = 0
+        cur_chapter_cnt = 0
+        current_file = self.write_novel_header(output_folder, title)
 
         # Loop that will write all chapters
-        while current_abs_chapter < total and self.running:
-            # Prepare a new file
-            file_nb += 1  # file_nb is 1 on first loop
-            chapters_in_book = 0
-            current_file = self.write_novel_header(output_folder, title, file_nb)
+        while cur_chapter_cnt < total and self.running:
 
-            # Write into file until done
-            # (chapter count for file reached or no more chapters)
-            while chapters_in_book < chapters_per_book \
-                    and current_abs_chapter < total and self.running:
-                if not chapter_d[current_abs_chapter]:
-                    self.semaphore.acquire(timeout=1)
-                    continue
+            if not chapter_d[cur_chapter_cnt]:
+                # Wait for reader to provide new chapter
+                # Check whether running is still true after every second
+                self.semaphore.acquire(timeout=1)
+                continue
 
-                # Write chapter into file
-                with open(current_file, 'a', encoding='utf-8') as output:
-                    output.write(chapter_d[current_abs_chapter])
-                    output.write('\n\n')
+            # Write chapter into file
+            with open(current_file, 'a', encoding='utf-8') as output:
+                output.write(chapter_d[cur_chapter_cnt])
+                output.write('\n\n')
 
-                # Save space by deleting finished chapter
-                del chapter_d[current_abs_chapter]
-                current_abs_chapter += 1
-                chapters_in_book += 1
-                self.progress += 1
-                self.notify()
+            # Save space by deleting finished chapter
+            del chapter_d[cur_chapter_cnt]
+            cur_chapter_cnt += 1
+            self.progress += 1
+            self.notify()
 
-    def scrap(self, overview, output_folder="", book_size=-1):
+    def scrap(self, overview, output_folder=""):
         """
         Start the process of ripping books from the website.
         :param overview:        Novel overview obtained by
@@ -192,7 +182,7 @@ class Scrapper:
         self.notify()
 
         self.create_novels_from_links(overview['title'], chapters,
-                                      output_folder, book_size=book_size)
+                                      output_folder)
 
     def listen(self, listener):
         assert hasattr(listener, "scrapper_notify"), \

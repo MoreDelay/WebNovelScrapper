@@ -7,18 +7,22 @@ class KakuyomuScrapper(scrapper.Scrapper):
     def __init__(self, code):
         """
         Constructor for the Scrapper for kakuyomu.jp.
-        Uses threads to have a greater usage of bandwidth and cpu performance, which increases overall speed.
-        :param code: The unique code for a book overview page found here: https://kakuyomu.jp/works/<CODE>
+        Uses threads to have a greater usage of bandwidth and cpu performance,
+        which increases overall speed.
+        :param code: The unique code for a book overview page found here:
+        https://kakuyomu.jp/works/<CODE>/
         """
         super().__init__()
         self.code = str(code)
 
     def get_novel_overview(self):
         """
-        Get title and links to the chapters that will be used in extract_chapter()
+        Get title and links to the chapters that will be used in
+        extract_chapter()
         :return: A dictionary with the fields:
                     'title' - A string of the title of the work.
-                    'chapters' - A list of strings that contains all links from which the chapters will be downloaded.
+                    'chapters' - A list of strings that contains all links
+                    from which the chapters will be downloaded.
         """
         res = dict()
 
