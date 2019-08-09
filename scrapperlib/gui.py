@@ -16,8 +16,14 @@ header = "Choose which novel to scrap!"
 
 class MainWindow:
 
-    def __init__(self, path="/"):
-        assert isinstance(path, str)
+    def __init__(self, path=""):
+        if path:
+            assert isinstance(path, str)
+        else:
+            path = ""
+
+        if os.path.isdir(path):
+            self.last_path = path
 
         # VARIABLES
         self.select_window = None
@@ -246,9 +252,15 @@ class MainWindow:
             return
 
         path = self.destination.get()
+        if not path:
+            path = os.path.realpath("/")
+
         if not os.path.isdir(path):
             self.destination_entry.config(background="#FFCCCC")
             return
+
+        # keep the last used path for saving when closing
+        self.last_path = path
 
         def download_wrapper(fkt):
             def f(*args, **kwargs):
@@ -265,7 +277,7 @@ class MainWindow:
 
         @download_wrapper
         def full_download():
-            self.scrapper.scrap(self.overview, output_folder="")
+            self.scrapper.scrap(self.overview, output_folder=path)
 
         @download_wrapper
         def range_download():
@@ -273,7 +285,7 @@ class MainWindow:
             start = int(self.ch_from.get())
             end = int(self.ch_to.get())
             dl_overview['chapters'] = dl_overview['chapters'][start-1:end]
-            self.scrapper.scrap(dl_overview, output_folder="")
+            self.scrapper.scrap(dl_overview, output_folder=path)
 
         @download_wrapper
         def selected_download():
@@ -281,7 +293,7 @@ class MainWindow:
             dl_overview['chapters'] = \
                 [x for i, x in enumerate(dl_overview['chapters'])
                  if i in self.current_selection]
-            self.scrapper.scrap(dl_overview, output_folder="")
+            self.scrapper.scrap(dl_overview, output_folder=path)
 
         download = {0: full_download, 1: range_download, 2: selected_download}
         t = threading.Thread(target=download[self.chapters_opt.get()])
@@ -376,9 +388,11 @@ class SelectionWindow:
         self.window.destroy()
 
 
-def main():
-    main_window = MainWindow()
+def main(output_dir=None):
+    main_window = MainWindow(output_dir)
     main_window.root.mainloop()
+    return main_window.last_path
 
 
-main()
+if __name__ == '__main__':
+    main()

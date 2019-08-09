@@ -3,11 +3,9 @@ import sys
 import configparser
 import argparse
 
-from scrapperlib import syosetu, kakuyomu
+from scrapperlib import syosetu, kakuyomu, gui
 
 legal_settings = ('output_folder',)
-
-print(os.path.realpath("."))
 
 
 def save_settings(settings):
@@ -50,29 +48,6 @@ def set_output_folder(settings):
     settings['main']['output_folder'] = output_folder
 
 
-def set_chapters_per_book(settings):
-    book_size = ''
-    valid = False
-
-    while not valid:
-        valid = True
-        book_size = input('Enter a book size (number of chapters per book). No Value will create just one book: ')
-
-        # Empty input
-        if not book_size:
-            book_size = '-1'
-            break
-
-        # Non empty input, check if integer
-        try:
-            int(book_size)
-        except ValueError:
-            print('ERROR: This is not an integer: %s' % book_size, file=sys.stderr)
-            valid = False
-
-    settings['main']['chapters_per_book'] = book_size
-
-
 def get_settings(**user_settings):
     settings = read_settings()
     for s in legal_settings:
@@ -80,20 +55,11 @@ def get_settings(**user_settings):
             settings['main'][s] = str(user_settings[s])
 
     output_folder = settings['main']['output_folder']
-    book_size = settings['main']['chapters_per_book']
 
     # Get a correct output path if not in settings
     if not output_folder or not os.path.isdir(output_folder):
         print('No valid output path was given or saved.')
         set_output_folder(settings)
-
-    # Get a book size limit if not in settings
-    try:
-        int(book_size)
-    # No entry or not integer
-    except ValueError:
-        print('No book size was given or saved.')
-        set_chapters_per_book(settings)
 
     return settings
 
@@ -101,7 +67,7 @@ def get_settings(**user_settings):
 def ask_about_settings(settings):
     # Functions to change a setting with user input
     changed = False
-    change = {'p': set_output_folder, 'c': set_chapters_per_book}
+    change = {'p': set_output_folder}
     user_in = True
     while user_in:
         print('Should the following settings be used?')
@@ -122,12 +88,12 @@ def ask_about_settings(settings):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('code',
+    parser.add_argument('code', nargs='*',
                         help='The novel code from either syosetu.com or kakuyomu.jp')
     parser.add_argument('-r', '--range', dest='range',
                         help='Only downloads chapters in the given range. Format: <start>:<end>\n'
-                             + 'If start is omitted, start from first chapter.\n'
-                             + 'If end is omitted, read all chapters from start until there are no more found.')
+                             'If start is omitted, start from first chapter.\n'
+                             'If end is omitted, read all chapters from start until there are no more found.')
     parser.add_argument('-f', dest='fast', action='store_true',
                         help='Do not ask for input, use saved settings.')
     parser.add_argument('-o', dest='output',
@@ -136,6 +102,8 @@ def main():
                         help='Look up novel on this site instead of guessing - "kakuyomu" or "syosetu".')
     parser.add_argument('-q', dest='quiet', action='store_true',
                         help='In quiet mode there will be no console output while downloading.')
+    parser.add_argument('--nogui', dest='nogui', action='store_true',
+                        help='Do not start the gui, only work with console arguments.')
 
     args = parser.parse_args()
     user_args = dict()
@@ -143,54 +111,68 @@ def main():
         if args.output[-1] != '\\':
             args.output += '\\'
         user_args['output_folder'] = args.output
-    if args.chapters:
-        user_args['chapters_per_book'] = args.chapters
 
-    first_chapter = 0
-    last_chapter = float('inf')
-    if args.range:
-        try:
-            s, e = args.range.split(':')
-            if s:
-                first_chapter = int(s)-1
-            if e:
-                last_chapter = int(e)
-        except Exception:
-            print("The range was not correctly formatted. Use integers. Format: <start>:<end>", file=sys.stderr)
-            return
+    if args.nogui:
+        # Do not start up gui
+        if not args.code:
+            raise ValueError("Provide a code to run without gui")
 
-    settings = get_settings(**user_args)
+        first_chapter = 0
+        last_chapter = float('inf')
+        if args.range:
+            try:
+                s, e = args.range.split(':')
+                if s:
+                    first_chapter = int(s)-1
+                if e:
+                    last_chapter = int(e)
+            except Exception:
+                print("The range was not correctly formatted. Use integers. Format: <start>:<end>", file=sys.stderr)
+                return
 
-    if not args.fast:
-        ask_about_settings(settings)
+        settings = get_settings(**user_args)
 
-    book = None
+        if not args.fast:
+            ask_about_settings(settings)
 
-    if not args.website:
-        # Differences between codes (as fas as I can see):
-        # Syosetu code begins with 'n'
-        # Kakuyomu code is just numerical
-        if args.code[0] == 'n':
+        book = None
+
+        if not args.website:
+            # Differences between codes (as fas as I can see):
+            # Syosetu code begins with 'n'
+            # Kakuyomu code is just numerical
+            if args.code[0] == 'n':
+                book = syosetu.SyosetuScrapper(code=args.code)
+            else:
+                book = kakuyomu.KakuyomuScrapper(code=args.code)
+
+        elif args.website == 'syosetu':
             book = syosetu.SyosetuScrapper(code=args.code)
-        else:
+        elif args.website == 'kakuyomu':
             book = kakuyomu.KakuyomuScrapper(code=args.code)
 
-    elif args.website == 'syosetu':
-        book = syosetu.SyosetuScrapper(code=args.code)
-    elif args.website == 'kakuyomu':
-        book = kakuyomu.KakuyomuScrapper(code=args.code)
+        if not book:
+            raise AssertionError("Book has not been initialized")
 
-    if not book:
-        raise AssertionError("Book has not been initialized")
+        try:
+            overview = book.get_novel_overview()
+        except AssertionError as e:
+            print("Getting Overview: " + str(e), file=sys.stderr)
+            return
 
-    try:
-        overview = book.get_novel_overview()
-    except AssertionError as e:
-        print("Getting Overview: " + str(e), file=sys.stderr)
-        return
+        book.scrap(overview=overview,
+                   output_folder=settings['main']['output_folder'])
 
-    book.scrap(overview=overview,
-               output_folder=settings['main']['output_folder'])
+    else:
+        # Start up gui
+        settings = read_settings()
+        old_path = settings['main']['output_folder']
+        last_path = gui.main(old_path)
+        # If a valid path was entered and used, save it for next time
+        if os.path.isdir(last_path):
+            settings['main']['output_folder'] = last_path
+            save_settings(settings)
 
 
-# main()
+if __name__ == '__main__':
+    main()

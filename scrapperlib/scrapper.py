@@ -2,7 +2,7 @@ import bs4
 import ssl
 import codecs
 import threading
-import sys
+import os
 from urllib.request import urlopen, URLError
 
 
@@ -141,6 +141,10 @@ class Scrapper:
                                     be saved in that are ready to be written
         :return:                    None
         """
+
+        assert os.path.isdir(output_folder), f"{output_folder} is not a directory"
+        if not output_folder[-1] in ('/', '\\'):
+            output_folder += '/'
 
         cur_chapter_cnt = 0
         current_file = self.write_novel_header(output_folder, title)
